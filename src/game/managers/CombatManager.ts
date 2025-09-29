@@ -59,7 +59,7 @@ export class CombatManager {
   }
 
   public cleanupDeadUnits(): void {
-    // Remove dead soldiers
+    // Remove dead soldiers (barracks notification happens in SoldierUnit.takeDamage)
     const deadSoldiers = this.soldiers.filter(s => s.state === 'dead')
     for (const soldier of deadSoldiers) {
       soldier.destroy()
@@ -87,7 +87,6 @@ export class CombatManager {
   }
 
   public async addSoldier(barracksId?: string): Promise<void> {
-    console.log('CombatManager.addSoldier() called!')
     const spawnY = GameConfig.BATTLE_CENTER_Y + (Math.random() - 0.5) * 100
 
     // For now, always create infantry soldiers (can be enhanced later)
@@ -101,19 +100,12 @@ export class CombatManager {
       (soldier as any).barracksId = barracksId
     }
 
-    console.log(`Created soldier at position (${soldier.x}, ${soldier.y})`)
-
     const activeEnemies = this.enemies.filter(e => e.state !== 'dead')
     soldier.setEnemies(activeEnemies)
 
-    console.log('Creating animated soldier sprite...')
     await soldier.createAnimatedSprite(this.scene)
-    console.log('Animated soldier sprite created successfully')
 
     this.soldiers.push(soldier)
-
-    console.log(`Total soldiers in arena: ${this.soldiers.length}`)
-
     this.scene.events.emit('unit_spawned', { unit: soldier })
   }
 

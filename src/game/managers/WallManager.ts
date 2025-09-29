@@ -37,7 +37,6 @@ export class WallManager {
     // Apply damage to the wall
     if (totalDamage > 0) {
       this.kingdomWall.takeDamage(totalDamage)
-      console.log(`Kingdom wall takes ${totalDamage.toFixed(1)} damage. HP: ${this.kingdomWall.currentHP}/${this.kingdomWall.maxHP}`)
     }
   }
 

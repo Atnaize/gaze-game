@@ -1,8 +1,9 @@
 import { AbstractUnit } from './AbstractUnit'
-import { Soldier, SoldierType, Position, Enemy } from '../../types/index'
+import { Soldier, SoldierType, Position, Enemy, Barracks } from '../../types/index'
 import { GameConfig } from '../../config/GameConfig'
 import { SpriteLoader } from '../loaders/SpriteLoader'
 import { GameTimeManager } from '../managers/GameTimeManager'
+import { useBuildingStore } from '../../stores/buildingStore'
 
 export class SoldierUnit extends AbstractUnit implements Soldier {
   public type: SoldierType
@@ -150,15 +151,12 @@ export class SoldierUnit extends AbstractUnit implements Soldier {
     try {
       if (scene.anims.exists(animationKey)) {
         this.animatedSprite.play(animationKey)
-        console.log(`Successfully started animation: ${animationKey}`)
       } else {
         console.warn(`Animation ${animationKey} does not exist`)
       }
     } catch (error) {
       console.error(`Failed to play initial animation for ${randomSprite}:`, error)
     }
-
-    console.log(`Created animated soldier sprite: ${randomSprite} at (${this.x}, ${this.y})`)
   }
 
   private updateDirection(): void {
@@ -234,6 +232,10 @@ export class SoldierUnit extends AbstractUnit implements Soldier {
 
     if (this.health <= 0) {
       this.state = 'dead'
+
+      // Notify barracks immediately when soldier dies
+      this.notifyBarracksOfDeath()
+
       if (this.animatedSprite) {
         this.animatedSprite.setAlpha(0.7)
         this.updateAnimation()
@@ -250,6 +252,37 @@ export class SoldierUnit extends AbstractUnit implements Soldier {
           this.state = 'idle'
         }
       }, 300)
+    }
+  }
+
+  private notifyBarracksOfDeath(): void {
+    const barracksId = (this as any).barracksId
+    if (!barracksId) {
+      console.log('Soldier died without barracksId')
+      return
+    }
+
+    // Get fresh state from store
+    const state = useBuildingStore.getState()
+    const building = Array.from(state.buildings.values()).find(b => b.id === barracksId)
+
+    if (building && building.type === 'barracks') {
+      const barracks = building as Barracks
+
+      // Decrement unit count and resource output
+      const newUnitCount = Math.max(0, barracks.unitCount - 1)
+      const newSoldierOutput = Math.max(0, (barracks.resourceOutputs.soldiers || 0) - 1)
+
+      state.updateBuilding(barracksId, {
+        ...barracks,
+        unitCount: newUnitCount,
+        resourceOutputs: {
+          ...barracks.resourceOutputs,
+          soldiers: newSoldierOutput
+        }
+      } as any)
+    } else {
+      console.log(`Could not find barracks ${barracksId} to notify of soldier death`)
     }
   }
 

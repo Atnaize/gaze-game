@@ -160,7 +160,6 @@ export abstract class BaseEnemy implements Enemy {
       if (this.scene.anims.exists(animKey)) {
         // For continuous actions like attacking or running, restart the animation if it's not playing
         if (this.currentAnimation !== animationName || !this.sprite.anims.isPlaying) {
-          console.log(`Playing animation: ${animKey} for enemy ${this.id} in state ${this.state}`)
           this.sprite.play(animKey)
           this.currentAnimation = animationName
         }
@@ -229,9 +228,6 @@ export abstract class BaseEnemy implements Enemy {
       const distance = Phaser.Math.Distance.Between(this.x, this.y, closestSoldier.x, closestSoldier.y)
 
       if (distance > GameConfig.ATTACK_RANGE) {
-        if (this.state !== 'moving') {
-          console.log(`Enemy ${this.id} moving toward soldier. Distance: ${distance.toFixed(1)}`)
-        }
         this.state = 'moving'
         this.playAnimation('Running')
 
@@ -239,9 +235,6 @@ export abstract class BaseEnemy implements Enemy {
         this.x += Math.cos(angle) * this.speed * deltaTime * gameSpeed / 1000
         this.y += Math.sin(angle) * this.speed * deltaTime * gameSpeed / 1000
       } else {
-        if (this.state !== 'attacking') {
-          console.log(`Enemy ${this.id} attacking soldier. Distance: ${distance.toFixed(1)}`)
-        }
         this.state = 'attacking'
         this.playAnimation('Slashing')
       }
@@ -258,9 +251,6 @@ export abstract class BaseEnemy implements Enemy {
     const distanceToWall = Phaser.Math.Distance.Between(this.x, this.y, wallX, wallY)
 
     if (distanceToWall > GameConfig.ATTACK_RANGE) {
-      if (this.state !== 'moving') {
-        console.log(`Enemy ${this.id} starting to move toward wall. Distance: ${distanceToWall.toFixed(1)}`)
-      }
       this.state = 'moving'
       this.playAnimation('Running')
 
@@ -268,9 +258,6 @@ export abstract class BaseEnemy implements Enemy {
       this.x += Math.cos(angle) * this.speed * deltaTime * gameSpeed / 1000
       this.y += Math.sin(angle) * this.speed * deltaTime * gameSpeed / 1000
     } else {
-      if (this.state !== 'attacking') {
-        console.log(`Enemy ${this.id} reached wall and started attacking. Distance: ${distanceToWall.toFixed(1)}`)
-      }
       this.state = 'attacking'
       this.playAnimation('Slashing')
     }

@@ -157,9 +157,11 @@ export class BuildingManager {
                 if (success) {
                   soldiersAdded++
                 } else {
+                  console.log(`Failed to add soldier ${i+1} to barracks ${building.id}`)
                   break
                 }
               } else {
+                console.log('addSoldierToBattle not available')
                 break
               }
             }

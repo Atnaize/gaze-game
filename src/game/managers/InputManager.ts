@@ -51,8 +51,6 @@ export class InputManager {
         this.clearModes()
       })
     }
-
-    console.log('Input handlers set up successfully')
   }
 
   private handleMouseMove(pointer: Phaser.Input.Pointer): void {
@@ -77,15 +75,11 @@ export class InputManager {
     // Convert screen coordinates to grid coordinates
     const gridX = Math.floor(pointer.x / this.GRID_SIZE)
     const gridY = Math.floor(pointer.y / this.GRID_SIZE)
-
-    console.log(`Clicked at grid position: (${gridX}, ${gridY})`)
-
     const gameState = useGameStore.getState()
     const { getBuilding } = useBuildingStore.getState()
 
     // Check if click is within grid bounds
     if (gridX < 0 || gridX >= gameState.gridWidth || gridY < 0 || gridY >= gameState.gridHeight) {
-      console.log('Click outside grid bounds')
       return
     }
 
@@ -103,12 +97,9 @@ export class InputManager {
   private handleDemolish(gridX: number, gridY: number): void {
     const { getBuilding } = useBuildingStore.getState()
 
-    console.log(`Attempting to demolish at (${gridX}, ${gridY})`)
     const building = getBuilding({ x: gridX, y: gridY })
     if (building) {
-      console.log(`Found building to demolish: ${building.type} at (${gridX}, ${gridY})`)
       if (this.onRemoveBuilding) {
-        console.log('Calling onRemoveBuilding callback')
         this.onRemoveBuilding({ x: gridX, y: gridY })
       } else {
         console.warn('onRemoveBuilding callback not set!')
@@ -152,7 +143,6 @@ export class InputManager {
   }
 
   private handleGazeMovement(position: Position): void {
-    console.log(`Moving gaze to (${position.x}, ${position.y})`)
     if (this.onMoveGaze) {
       this.onMoveGaze(position)
     }

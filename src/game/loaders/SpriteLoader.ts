@@ -372,8 +372,6 @@ export class SpriteLoader {
         frameRate: animData.frameRate,
         repeat: animData.repeat ? -1 : 0
       })
-
-      console.log(`Created animation: ${animKey} with ${validFrames.length} frames`)
     })
   }
 

@@ -49,7 +49,7 @@ export class GazeManager {
     if (!this.gazeGraphics) return
 
     this.gazeGraphics.clear()
-    this.gazeGraphics.lineStyle(3, 0xffff00)
+    this.gazeGraphics.lineStyle(1, 0xffff00)
 
     // Draw outer perimeter only
     this.drawOuterPerimeter(pattern)
@@ -90,51 +90,6 @@ export class GazeManager {
     })
 
     this.gazeGraphics.strokePath()
-  }
-
-  private findBorderSegments(tiles: Position[]): Array<{x: number, y: number, width: number, height: number}> {
-    if (tiles.length === 0) return []
-
-    const tileSet = new Set(tiles.map(t => `${t.x},${t.y}`))
-    const segments: Array<{x: number, y: number, width: number, height: number}> = []
-    const processed = new Set<string>()
-
-    tiles.forEach(tile => {
-      const key = `${tile.x},${tile.y}`
-      if (processed.has(key)) return
-
-      // Find the largest rectangle starting from this tile
-      let width = 1
-      let height = 1
-
-      // Expand width
-      while (tileSet.has(`${tile.x + width},${tile.y}`)) {
-        width++
-      }
-
-      // Expand height
-      let canExpandHeight = true
-      while (canExpandHeight) {
-        for (let x = tile.x; x < tile.x + width; x++) {
-          if (!tileSet.has(`${x},${tile.y + height}`)) {
-            canExpandHeight = false
-            break
-          }
-        }
-        if (canExpandHeight) height++
-      }
-
-      // Mark processed tiles
-      for (let x = tile.x; x < tile.x + width; x++) {
-        for (let y = tile.y; y < tile.y + height; y++) {
-          processed.add(`${x},${y}`)
-        }
-      }
-
-      segments.push({ x: tile.x, y: tile.y, width, height })
-    })
-
-    return segments
   }
 
   public getGazePositions(gazeCenter: Position, gazeSize: number, gazeRotation: number): Position[] {

@@ -222,7 +222,6 @@ const useEventStoreExample = () => {
 
   // Listen to events
   useEventListener('resource_produced', (data) => {
-    console.log(`Produced ${data.amount} ${data.type}`)
   })
 
   return { handleResourceProduction }

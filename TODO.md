@@ -1,7 +1,7 @@
 # Todos
 
 ## Persistant loot
-When a special event is reached X waves cleared or during achivements, a new persistant ressource is earned
+When a special event is reached (X waves cleared or during achivements), a new persistant ressource is earned
 This resource will be persistant and stored for all new game
 This resource will unlock special feature or permanent upgrades
 
@@ -9,6 +9,10 @@ This resource will unlock special feature or permanent upgrades
 When there is no ennemies, make the solider returning to the wall
 When game is paused, make the sprite (enemies and solider) in the idle state, that could be funny
 I don't want all unit the stacked une behind each other, we should see them visually, could be great that they can collide a little bit to have a more natural behavior
+
+## UI
+Refactor of the UI for a responsive layout
+
 
 # Ideas
 
