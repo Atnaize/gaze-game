@@ -3,6 +3,8 @@ import { useGameStore } from '../stores/gameStore'
 import { BuildingFactory } from '../game/factories/BuildingFactory'
 import { BuildingRegistry } from '../game/buildings'
 import { BuildingType } from '../types'
+import { Tooltip } from './Tooltip'
+import { BuildingTooltip } from './BuildingTooltip'
 
 interface BuildingButtonProps {
   type: BuildingType
@@ -19,20 +21,20 @@ const BuildingButton: React.FC<BuildingButtonProps> = ({
   onClick,
   disabled = false
 }) => {
-  const cost = BuildingFactory.getBuildingCost(type)
-  const costText = Object.entries(cost)
-    .map(([resource, amount]) => `${amount} ${resource}`)
-    .join(', ')
-
   return (
-    <button
-      className={`game-button ${isActive ? 'active' : ''}`}
-      onClick={onClick}
-      disabled={disabled}
-      title={disabled ? 'Not enough resources' : `Cost: ${costText}`}
+    <Tooltip
+      content={<BuildingTooltip buildingType={type} canAfford={!disabled} />}
+      delay={200}
+      position="right"
     >
-      {label}
-    </button>
+      <button
+        className={`game-button ${isActive ? 'active' : ''}`}
+        onClick={onClick}
+        disabled={disabled}
+      >
+        {label}
+      </button>
+    </Tooltip>
   )
 }
 

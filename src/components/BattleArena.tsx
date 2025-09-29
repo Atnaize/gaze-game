@@ -46,6 +46,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ className }) => {
           // Set up event listeners
           this.events.on('wave_started', (data: { wave: any }) => {
             setCurrentWave(data.wave)
+            // Update highest wave for achievements
+            useGameStore.getState().updateHighestWave(data.wave.number)
           })
 
           this.events.on('game_over', (eventData: { totalWaves: number, stats: any }) => {

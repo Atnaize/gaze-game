@@ -93,6 +93,41 @@
   background: rgba(0, 0, 0, 0.3);
 }
 
+.info-footer {
+  padding: 12px 20px;
+  background: rgba(0, 0, 0, 0.5);
+  border-top: 1px solid #34495e;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #95a5a6;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.footer-link {
+  color: #3498db;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+  color: #5dade2;
+  text-decoration: underline;
+}
+
+.footer-separator {
+  color: #7f8c8d;
+}
+
+.footer-copyright {
+  color: #95a5a6;
+}
+
 /* Game Canvas */
 .game-canvas-wrapper {
   border-radius: 8px;
@@ -596,6 +631,31 @@
   color: #ecf0f1;
 }
 
+
+/* Tooltip Styles */
+.tooltip {
+  animation: tooltipFadeIn 0.2s ease-out;
+  transform-origin: center;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Responsive tooltip adjustments */
+@media (max-width: 768px) {
+  .tooltip {
+    max-width: 90vw !important;
+    font-size: 0.85rem !important;
+  }
+}
 
 /* Utility Classes */
 .sr-only {

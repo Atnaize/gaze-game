@@ -37,8 +37,6 @@ export const GameOverMenu: React.FC<GameOverMenuProps> = ({
           <li>🌊 Waves Survived: <strong>{totalWaves}</strong></li>
           <li>⚔️ Enemies Defeated: <strong>{stats.enemyKills}</strong></li>
           <li>💀 Soldiers Lost: <strong>{stats.soldierKills}</strong></li>
-          <li>💰 Gold Earned: <strong>{stats.goldEarned}</strong></li>
-          <li>🏛️ Total Battles: <strong>{stats.totalBattles}</strong></li>
         </ul>
       </div>
 

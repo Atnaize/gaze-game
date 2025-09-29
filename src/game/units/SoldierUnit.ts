@@ -115,9 +115,8 @@ export class SoldierUnit extends AbstractUnit implements Soldier {
   public async createAnimatedSprite(scene: Phaser.Scene): Promise<void> {
     const spriteLoader = SpriteLoader.getInstance()
 
-    // Select a random Swordsman sprite
-    const swordsmanSprites = ['Swordsman', 'Swordsman2', 'Swordsman3']
-    const randomSprite = swordsmanSprites[Math.floor(Math.random() * swordsmanSprites.length)]
+    // Select Swordsman sprite
+    const randomSprite = 'Swordsman'
 
     // Load the sprite if not already loaded
     const loaded = await spriteLoader.loadSprite(scene, randomSprite)
@@ -128,49 +127,35 @@ export class SoldierUnit extends AbstractUnit implements Soldier {
       return
     }
 
-    // Create animated sprite using the sprite sheet
-    const spriteSheetKey = `${randomSprite}_Idle_sheet`
-
-    console.log(`Creating soldier sprite with key: ${spriteSheetKey}`)
-    console.log(`Available textures:`, Object.keys(scene.textures.list))
+    // Create animated sprite using first idle frame
+    const firstFrameKey = `${randomSprite}_Idle_0`
 
     // Check if the texture exists
-    if (!scene.textures.exists(spriteSheetKey)) {
-      console.error(`Sprite sheet texture not found: ${spriteSheetKey}`)
+    if (!scene.textures.exists(firstFrameKey)) {
+      console.error(`Sprite texture not found: ${firstFrameKey}`)
       this.createSprite(scene)
       return
     }
 
-    this.animatedSprite = scene.add.sprite(this.x, this.y, spriteSheetKey, 0)
-    this.animatedSprite.setScale(2) // Reasonable scale for 128x256 sprites
+    this.animatedSprite = scene.add.sprite(this.x, this.y, firstFrameKey)
+    this.animatedSprite.setScale(2)
     this.animatedSprite.setDepth(10)
 
     // Store sprite reference for animation management
     this.spriteKey = randomSprite
 
-    // Start with idle animation immediately (right direction by default)
-    const animationKey = `${randomSprite}_Idle_${this.direction}`
+    // Start with idle animation
+    const animationKey = `${randomSprite}_Idle`
 
     try {
       if (scene.anims.exists(animationKey)) {
         this.animatedSprite.play(animationKey)
         console.log(`Successfully started animation: ${animationKey}`)
       } else {
-        // Fallback to default animation without direction
-        const fallbackAnimationKey = `${randomSprite}_Idle`
-        console.warn(`Animation ${animationKey} does not exist, trying fallback: ${fallbackAnimationKey}`)
-        if (scene.anims.exists(fallbackAnimationKey)) {
-          this.animatedSprite.play(fallbackAnimationKey)
-          console.log(`Successfully started fallback animation: ${fallbackAnimationKey}`)
-        } else {
-          console.warn(`Fallback animation ${fallbackAnimationKey} does not exist, setting frame 0`)
-          this.animatedSprite.setFrame(0)
-        }
+        console.warn(`Animation ${animationKey} does not exist`)
       }
     } catch (error) {
       console.error(`Failed to play initial animation for ${randomSprite}:`, error)
-      console.log(`Falling back to frame 0`)
-      this.animatedSprite.setFrame(0)
     }
 
     console.log(`Created animated soldier sprite: ${randomSprite} at (${this.x}, ${this.y})`)
@@ -188,12 +173,17 @@ export class SoldierUnit extends AbstractUnit implements Soldier {
     } else {
       this.direction = dy > 0 ? 'down' : 'up'
     }
+
+    // Flip sprite horizontally based on direction
+    if (this.animatedSprite) {
+      this.animatedSprite.setFlipX(this.direction === 'left')
+    }
   }
 
   public updateAnimation(): void {
     if (!this.animatedSprite || !this.spriteKey) return
 
-    // Update direction based on target
+    // Update direction based on target (for sprite flipping)
     this.updateDirection()
 
     // Get pause state from GameTimeManager to avoid circular dependency
@@ -204,26 +194,26 @@ export class SoldierUnit extends AbstractUnit implements Soldier {
 
     // If game is paused, always use idle animation
     if (isPaused) {
-      animationKey = `${this.spriteKey}_Idle_${this.direction}`
+      animationKey = `${this.spriteKey}_Idle`
     } else {
       switch (this.state) {
         case 'idle':
-          animationKey = `${this.spriteKey}_Idle_${this.direction}`
+          animationKey = `${this.spriteKey}_Idle`
           break
         case 'moving':
-          animationKey = `${this.spriteKey}_Walking_${this.direction}`
+          animationKey = `${this.spriteKey}_Walking`
           break
         case 'attacking':
-          animationKey = `${this.spriteKey}_Slashing_${this.direction}`
+          animationKey = `${this.spriteKey}_Slashing`
           break
         case 'hurt':
-          animationKey = `${this.spriteKey}_Hurt_${this.direction}`
+          animationKey = `${this.spriteKey}_Hurt`
           break
         case 'dead':
-          animationKey = `${this.spriteKey}_Dying_${this.direction}`
+          animationKey = `${this.spriteKey}_Dying`
           break
         default:
-          animationKey = `${this.spriteKey}_Idle_${this.direction}`
+          animationKey = `${this.spriteKey}_Idle`
       }
     }
 
@@ -232,14 +222,7 @@ export class SoldierUnit extends AbstractUnit implements Soldier {
       try {
         this.animatedSprite.play(animationKey)
       } catch (error) {
-        // Fallback to default animation without direction
-        const fallbackAnimationKey = animationKey.replace(`_${this.direction}`, '')
-        console.warn(`Failed to play animation: ${animationKey}, trying fallback: ${fallbackAnimationKey}`)
-        try {
-          this.animatedSprite.play(fallbackAnimationKey)
-        } catch (fallbackError) {
-          console.warn(`Failed to play fallback animation: ${fallbackAnimationKey}`, fallbackError)
-        }
+        console.warn(`Failed to play animation: ${animationKey}`, error)
       }
     }
   }

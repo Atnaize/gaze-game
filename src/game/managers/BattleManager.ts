@@ -79,11 +79,11 @@ export class BattleManager {
 
     // Check if wave is complete
     if (this.arena.currentWave && this.arena.currentWave.status === 'active') {
+      // Save wave reward before checkWaveComplete sets currentWave to null
+      const waveReward = this.arena.currentWave.reward
       if (this.waveManager.checkWaveComplete(this.combatManager.getEnemies())) {
-        const currentWave = this.waveManager.getCurrentWave()
-        if (currentWave) {
-          this.combatManager.addTreasure(currentWave.reward)
-        }
+        // Add treasure to stats
+        this.combatManager.addTreasure(waveReward)
         this.combatManager.cleanupDeadUnits()
       }
     }
@@ -110,8 +110,11 @@ export class BattleManager {
     this.arena.gameOver = true
     this.waveManager.setBattleInProgress(false)
 
+    // Get total waves before cleanup
+    const totalWaves = this.waveManager.getTotalWaves()
+
     // Let combat manager handle cleanup and emit event
-    this.combatManager.handleGameOver()
+    this.combatManager.handleGameOver(totalWaves)
   }
 
   private handleDefeat(): void {

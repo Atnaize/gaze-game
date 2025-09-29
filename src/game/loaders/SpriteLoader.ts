@@ -4,7 +4,6 @@ export interface SpriteMetadata {
   name: string
   folderPath: string
   animations: AnimationData[]
-  spriteType?: 'individual' | 'spritesheet'
 }
 
 export interface AnimationData {
@@ -12,12 +11,7 @@ export interface AnimationData {
   frames: string[]
   frameRate: number
   repeat: boolean
-  spriteSheetConfig?: {
-    frameWidth: number
-    frameHeight: number
-    frameCount: number
-    fileName: string
-  }
+  frameCount?: number // Optional: specify exact frame count to avoid loading missing frames
 }
 
 export interface LoadedSprite {
@@ -227,23 +221,10 @@ export class SpriteLoader {
         folderPath: 'Orc',
         animations: this.getStandardAnimations()
       },
-      // Soldier Sprites (Sprite Sheets)
+      // Soldier Sprites
       {
         name: 'Swordsman',
         folderPath: 'Swordsman',
-        spriteType: 'spritesheet',
-        animations: this.getSwordsmanAnimations()
-      },
-      {
-        name: 'Swordsman2',
-        folderPath: 'Swordsman2',
-        spriteType: 'spritesheet',
-        animations: this.getSwordsmanAnimations()
-      },
-      {
-        name: 'Swordsman3',
-        folderPath: 'Swordsman3',
-        spriteType: 'spritesheet',
         animations: this.getSwordsmanAnimations()
       }
     ]
@@ -266,81 +247,16 @@ export class SpriteLoader {
   }
 
   private getSwordsmanAnimations(): AnimationData[] {
+    // Swordsman frame counts: Idle=12, Walking=8, Hurt=5, Dying=8, Slashing=8
     return [
-      {
-        name: 'Idle',
-        frames: [],
-        frameRate: GameConfig.SPRITE_IDLE_FRAME_RATE,
-        repeat: true,
-        spriteSheetConfig: {
-          frameWidth: 128,
-          frameHeight: 64, // 256px / 4 rows = 64px per row
-          frameCount: 12, // 12 columns as described
-          fileName: 'idle.png'
-        }
-      },
-      {
-        name: 'Walking',
-        frames: [],
-        frameRate: GameConfig.SPRITE_WALK_FRAME_RATE,
-        repeat: true,
-        spriteSheetConfig: {
-          frameWidth: 128,
-          frameHeight: 64, // 256px / 4 rows = 64px per row
-          frameCount: 6, // 6 columns per row
-          fileName: 'walk.png'
-        }
-      },
-      {
-        name: 'Running',
-        frames: [],
-        frameRate: GameConfig.SPRITE_RUN_FRAME_RATE,
-        repeat: true,
-        spriteSheetConfig: {
-          frameWidth: 128,
-          frameHeight: 64, // 256px / 4 rows = 64px per row
-          frameCount: 8, // 8 columns per row
-          fileName: 'run.png'
-        }
-      },
-      {
-        name: 'Hurt',
-        frames: [],
-        frameRate: GameConfig.SPRITE_HURT_FRAME_RATE,
-        repeat: false,
-        spriteSheetConfig: {
-          frameWidth: 128,
-          frameHeight: 64, // 256px / 4 rows = 64px per row
-          frameCount: 6, // 6 columns per row
-          fileName: 'hurt.png'
-        }
-      },
-      {
-        name: 'Dying',
-        frames: [],
-        frameRate: GameConfig.SPRITE_DEATH_FRAME_RATE,
-        repeat: false,
-        spriteSheetConfig: {
-          frameWidth: 128,
-          frameHeight: 64, // 256px / 4 rows = 64px per row
-          frameCount: 8, // 8 columns per row
-          fileName: 'death.png'
-        }
-      },
-      {
-        name: 'Slashing',
-        frames: [],
-        frameRate: GameConfig.SPRITE_ATTACK_FRAME_RATE,
-        repeat: true,
-        spriteSheetConfig: {
-          frameWidth: 128,
-          frameHeight: 64, // 256px / 4 rows = 64px per row
-          frameCount: 8, // 8 columns per row
-          fileName: 'attack.png'
-        }
-      }
+      { name: 'Idle', frames: [], frameRate: GameConfig.SPRITE_IDLE_FRAME_RATE, repeat: true, frameCount: 12 },
+      { name: 'Walking', frames: [], frameRate: GameConfig.SPRITE_WALK_FRAME_RATE, repeat: true, frameCount: 8 },
+      { name: 'Hurt', frames: [], frameRate: GameConfig.SPRITE_HURT_FRAME_RATE, repeat: false, frameCount: 5 },
+      { name: 'Dying', frames: [], frameRate: GameConfig.SPRITE_DEATH_FRAME_RATE, repeat: false, frameCount: 8 },
+      { name: 'Slashing', frames: [], frameRate: GameConfig.SPRITE_ATTACK_FRAME_RATE, repeat: true, frameCount: 8 }
     ]
   }
+
 
   async loadSprite(scene: Phaser.Scene, spriteKey: string): Promise<boolean> {
     const metadata = this.spriteMetadata.get(spriteKey)
@@ -354,11 +270,7 @@ export class SpriteLoader {
     }
 
     try {
-      if (metadata.spriteType === 'spritesheet') {
-        await this.loadSpriteSheets(scene, metadata)
-      } else {
-        await this.loadSpriteFrames(scene, metadata)
-      }
+      await this.loadSpriteFrames(scene, metadata)
       this.createAnimations(scene, metadata)
 
       this.loadedSprites.set(spriteKey, {
@@ -374,56 +286,19 @@ export class SpriteLoader {
     }
   }
 
-  private async loadSpriteSheets(scene: Phaser.Scene, metadata: SpriteMetadata): Promise<void> {
-    const basePath = `sprites/${metadata.folderPath}`
-
-    // Load sprite sheets for each animation
-    for (const animation of metadata.animations) {
-      if (!animation.spriteSheetConfig) continue
-
-      const spriteSheetPath = `${basePath}/${animation.spriteSheetConfig.fileName}`
-      const spriteSheetKey = `${metadata.name}_${animation.name}_sheet`
-
-      // Load the sprite sheet with 4 rows of frames
-      scene.load.spritesheet(spriteSheetKey, spriteSheetPath, {
-        frameWidth: animation.spriteSheetConfig.frameWidth,
-        frameHeight: animation.spriteSheetConfig.frameHeight,
-        endFrame: (animation.spriteSheetConfig.frameCount * 4) - 1 // 4 rows
-      })
-
-      // Generate frame keys for all frames in all 4 rows
-      const frames: string[] = []
-      for (let i = 0; i < animation.spriteSheetConfig.frameCount * 4; i++) {
-        frames.push(`${spriteSheetKey}:${i}`)
-      }
-      animation.frames = frames
-    }
-
-    return new Promise((resolve) => {
-      const completeHandler = () => {
-        console.log(`Loaded sprite sheets for: ${metadata.name}`)
-        resolve()
-      }
-
-      scene.load.once('complete', completeHandler)
-      scene.load.start()
-    })
-  }
-
   private async loadSpriteFrames(scene: Phaser.Scene, metadata: SpriteMetadata): Promise<void> {
     const basePath = `sprites/${metadata.folderPath}`
     const spriteBaseName = this.getSpriteBaseName(metadata.name)
 
-    // Handle different sprite structures
+    // All sprites use standard structure: sprites/SpriteName/AnimationName/0_SpriteName_AnimationName_000.png
     for (const animation of metadata.animations) {
       const frames: string[] = []
-
-      // All sprites now use the standard structure: sprites/SpriteName/AnimationName/
       const animationPath = `${basePath}/${animation.name}`
       const fileNamePattern = `0_${spriteBaseName}_${animation.name}_{index}.png`
 
-      // Load frames for this animation
-      for (let frameIndex = 0; frameIndex < 12; frameIndex++) {
+      // Load frames for this animation (use specified frameCount or default to 12)
+      const maxFrames = animation.frameCount || 12
+      for (let frameIndex = 0; frameIndex < maxFrames; frameIndex++) {
         const frameName = fileNamePattern.replace('{index}', frameIndex.toString().padStart(3, '0'))
         const framePath = `${animationPath}/${frameName}`
         const frameKey = `${metadata.name}_${animation.name}_${frameIndex}`
@@ -472,93 +347,33 @@ export class SpriteLoader {
 
   private createAnimations(scene: Phaser.Scene, metadata: SpriteMetadata): void {
     metadata.animations.forEach(animData => {
-      if (metadata.spriteType === 'spritesheet') {
-        // For sprite sheets with 4 rows (down, left, right, up), create directional animations
-        const directions = ['down', 'left', 'right', 'up'] // Row 0, 1, 2, 3
-        const frameCount = animData.spriteSheetConfig?.frameCount || 0
-        const [textureKey] = animData.frames[0].split(':') // Get the texture key
-
-        directions.forEach((direction, dirIndex) => {
-          const validFrames: any[] = []
-
-          // Calculate frame indices for this direction row
-          // Each row has frameCount frames, so row 0 = 0-11, row 1 = 12-23, etc.
-          const startFrame = dirIndex * frameCount
-          for (let frameIdx = 0; frameIdx < frameCount; frameIdx++) {
-            const frameIndex = startFrame + frameIdx
-            validFrames.push({ key: textureKey, frame: frameIndex })
-          }
-
-          if (validFrames.length === 0) {
-            console.warn(`No valid frames for animation: ${animData.name}_${direction} in sprite: ${metadata.name}`)
-            return
-          }
-
-          const dirAnimKey = `${metadata.name}_${animData.name}_${direction}`
-          if (scene.anims.exists(dirAnimKey)) {
-            scene.anims.remove(dirAnimKey)
-          }
-
-          scene.anims.create({
-            key: dirAnimKey,
-            frames: validFrames,
-            frameRate: animData.frameRate,
-            repeat: animData.repeat ? -1 : 0
-          })
-
-          console.log(`Created directional animation: ${dirAnimKey} with ${validFrames.length} frames (frames ${startFrame}-${startFrame + frameCount - 1})`)
+      // For individual frame sprites, filter out frames that failed to load
+      const validFrames = animData.frames
+        .filter(frameKey => {
+          const texture = scene.textures.get(frameKey)
+          return texture && texture.key !== '__MISSING'
         })
+        .map(frameKey => ({ key: frameKey }))
 
-        // Create default animation (right direction - row 2)
-        const defaultFrames: any[] = []
-        const rightRowStartFrame = 2 * frameCount // Row 2 (right direction)
-        for (let frameIdx = 0; frameIdx < frameCount; frameIdx++) {
-          const frameIndex = rightRowStartFrame + frameIdx
-          defaultFrames.push({ key: textureKey, frame: frameIndex })
-        }
-
-        const animKey = `${metadata.name}_${animData.name}`
-        if (scene.anims.exists(animKey)) {
-          scene.anims.remove(animKey)
-        }
-
-        scene.anims.create({
-          key: animKey,
-          frames: defaultFrames,
-          frameRate: animData.frameRate,
-          repeat: animData.repeat ? -1 : 0
-        })
-
-        console.log(`Created default animation: ${animKey} with ${defaultFrames.length} frames (right direction)`)
-      } else {
-        // For individual frame sprites, filter out frames that failed to load
-        const validFrames = animData.frames
-          .filter(frameKey => {
-            const texture = scene.textures.get(frameKey)
-            return texture && texture.key !== '__MISSING'
-          })
-          .map(frameKey => ({ key: frameKey }))
-
-        if (validFrames.length === 0) {
-          console.warn(`No valid frames for animation: ${animData.name} in sprite: ${metadata.name}`)
-          return
-        }
-
-        const animKey = `${metadata.name}_${animData.name}`
-
-        if (scene.anims.exists(animKey)) {
-          scene.anims.remove(animKey)
-        }
-
-        scene.anims.create({
-          key: animKey,
-          frames: validFrames,
-          frameRate: animData.frameRate,
-          repeat: animData.repeat ? -1 : 0
-        })
-
-        console.log(`Created animation: ${animKey} with ${validFrames.length} frames`)
+      if (validFrames.length === 0) {
+        console.warn(`No valid frames for animation: ${animData.name} in sprite: ${metadata.name}`)
+        return
       }
+
+      const animKey = `${metadata.name}_${animData.name}`
+
+      if (scene.anims.exists(animKey)) {
+        scene.anims.remove(animKey)
+      }
+
+      scene.anims.create({
+        key: animKey,
+        frames: validFrames,
+        frameRate: animData.frameRate,
+        repeat: animData.repeat ? -1 : 0
+      })
+
+      console.log(`Created animation: ${animKey} with ${validFrames.length} frames`)
     })
   }
 

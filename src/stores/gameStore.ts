@@ -16,6 +16,12 @@ interface GameState {
   gridWidth: number
   gridHeight: number
 
+  // Achievement tracking
+  gazeUpgrades: number
+  totalPlayTime: number
+  highestWave: number
+  sessionStartTime: number
+
   // Actions
   updateResource: (type: keyof Resources, amount: number) => void
   consumeResource: (type: keyof Resources, amount: number) => boolean
@@ -30,6 +36,8 @@ interface GameState {
   resumeGame: () => void
   setGameSpeed: (speed: number) => void
   resetGame: () => void
+  updatePlayTime: () => void
+  updateHighestWave: (wave: number) => void
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -49,6 +57,11 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   isPaused: false,
   gameSpeed: GameConfig.DEFAULT_GAME_SPEED,
+
+  gazeUpgrades: 0,
+  totalPlayTime: 0,
+  highestWave: 0,
+  sessionStartTime: Date.now(),
 
   updateResource: (type, amount) => set((state) => ({
     resources: {
@@ -124,7 +137,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       if (isGazePatternValid(state.gazeCenter, newSize, state.gazeRotation)) {
         set((prevState) => ({
           gazeSize: newSize,
-          gazeCenter: state.gazeCenter
+          gazeCenter: state.gazeCenter,
+          gazeUpgrades: prevState.gazeUpgrades + 1
         }))
       } else {
         // Find best placement for the new size
@@ -133,7 +147,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         set((prevState) => ({
           gazeSize: newSize,
           gazeCenter: bestPlacement.position,
-          gazeRotation: bestPlacement.rotation
+          gazeRotation: bestPlacement.rotation,
+          gazeUpgrades: prevState.gazeUpgrades + 1
         }))
       }
       return true
@@ -187,6 +202,19 @@ export const useGameStore = create<GameState>((set, get) => ({
       gameSpeed: speed
     }))
   },
+
+  updatePlayTime: () => set((state) => {
+    const now = Date.now()
+    const sessionTime = now - state.sessionStartTime
+    return {
+      totalPlayTime: state.totalPlayTime + sessionTime,
+      sessionStartTime: now
+    }
+  }),
+
+  updateHighestWave: (wave) => set((state) => ({
+    highestWave: Math.max(state.highestWave, wave)
+  })),
 
   resetGame: () => {
     const timeManager = GameTimeManager.getInstance()

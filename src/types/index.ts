@@ -207,3 +207,40 @@ export interface EnemyConfig {
   reward: number
   description: string
 }
+
+// Achievement system types
+export type AchievementCategory = 'combat' | 'economy' | 'building' | 'survival' | 'misc'
+export type AchievementRarity = 'common' | 'rare' | 'epic' | 'legendary'
+
+export interface AchievementProgress {
+  current: number
+  required: number
+}
+
+export interface Achievement {
+  id: string
+  name: string
+  description: string
+  category: AchievementCategory
+  rarity: AchievementRarity
+  icon: string
+  hidden: boolean
+  progress?: AchievementProgress
+  unlockedAt?: number
+  checkCondition: (gameState: GameStateSnapshot) => boolean | AchievementProgress
+}
+
+export interface GameStateSnapshot {
+  resources: Resources
+  buildings: Building[]
+  battleStats: BattleStats
+  totalWaves: number
+  gameOver: boolean
+  gazeUpgrades: number
+  totalPlayTime: number
+  buildingCounts: Record<BuildingType, number>
+  highestWave: number
+  fastestWaveCompletion: number
+  totalGoldEarned: number
+  totalResourcesProduced: Record<keyof Resources, number>
+}

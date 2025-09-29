@@ -126,10 +126,18 @@ export class CombatManager {
     this.stats.goldEarned += amount
   }
 
-  public handleGameOver(): void {
+  public handleGameOver(totalWaves: number): void {
     console.log('Game Over! Kingdom wall has been destroyed!')
 
-    // Clean up all remaining units
+    // Count ALL soldiers (both dead and alive) as lost
+    // Dead soldiers haven't been cleaned up yet, so they're still in the array
+    for (const soldier of this.soldiers) {
+      this.stats.soldierKills++
+      soldier.destroy()
+    }
+    this.soldiers = []
+
+    // Clean up remaining enemies
     for (const enemy of this.enemies) {
       if (enemy.state !== 'dead') {
         enemy.destroy()
@@ -137,16 +145,10 @@ export class CombatManager {
     }
     this.enemies = []
 
-    for (const soldier of this.soldiers) {
-      if (soldier.state !== 'dead') {
-        soldier.destroy()
-      }
-    }
-    this.soldiers = []
-
-    // Emit game over event
+    // Emit game over event with stats and totalWaves
     this.scene.events.emit('game_over', {
-      stats: this.stats
+      stats: this.stats,
+      totalWaves
     })
   }
 

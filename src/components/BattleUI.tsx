@@ -101,10 +101,6 @@ export const BattleUI: React.FC<BattleUIProps> = ({ className }) => {
             <span className="stat-label">Soldiers Lost:</span>
             <span className="stat-value">{stats.soldierKills}</span>
           </div>
-          <div className="stat-item">
-            <span className="stat-label">Gold Earned:</span>
-            <span className="stat-value highlight">{stats.goldEarned}</span>
-          </div>
         </div>
       </div>
     </div>
