@@ -1,0 +1,5 @@
+export { AbstractBuilding } from './AbstractBuilding'
+export { FarmBuilding } from './FarmBuilding'
+export { MineBuilding } from './MineBuilding'
+export { BarracksBuilding } from './BarracksBuilding'
+export { BuildingRegistry } from './BuildingRegistry'
