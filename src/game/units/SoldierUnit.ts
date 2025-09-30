@@ -269,17 +269,12 @@ export class SoldierUnit extends AbstractUnit implements Soldier {
     if (building && building.type === 'barracks') {
       const barracks = building as Barracks
 
-      // Decrement unit count and resource output
+      // Only decrement unit count (current alive soldiers)
+      // Do NOT decrement resourceOutputs.soldiers - that tracks lifetime production
       const newUnitCount = Math.max(0, barracks.unitCount - 1)
-      const newSoldierOutput = Math.max(0, (barracks.resourceOutputs.soldiers || 0) - 1)
-
       state.updateBuilding(barracksId, {
         ...barracks,
-        unitCount: newUnitCount,
-        resourceOutputs: {
-          ...barracks.resourceOutputs,
-          soldiers: newSoldierOutput
-        }
+        unitCount: newUnitCount
       } as any)
     } else {
       console.log(`Could not find barracks ${barracksId} to notify of soldier death`)
