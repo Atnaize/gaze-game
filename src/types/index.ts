@@ -124,6 +124,7 @@ export interface Soldier extends Unit {
   type: SoldierType
   faction: 'player'
   setEnemies(enemies: Enemy[]): void
+  setNearbySoldiers(soldiers: Soldier[]): void
 }
 
 export interface Enemy extends Unit {
@@ -131,6 +132,7 @@ export interface Enemy extends Unit {
   faction: 'enemy'
   reward: number
   setSoldiers(soldiers: Soldier[]): void
+  setNearbyEnemies(enemies: Enemy[]): void
 }
 
 export interface BattleStats {
@@ -206,6 +208,7 @@ export interface EnemyConfig {
   speed: number
   reward: number
   description: string
+  attackCooldown?: number // Optional: attack cooldown in ms (default: 1000)
 }
 
 // Achievement system types

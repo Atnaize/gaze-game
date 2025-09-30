@@ -1,13 +1,12 @@
-import { AbstractUnit } from './AbstractUnit'
-import { Soldier, SoldierType, Position, Enemy, Barracks } from '../../types/index'
+import { BaseAlly } from './BaseAlly'
+import { SoldierType, Position, Barracks } from '../../types/index'
 import { GameConfig } from '../../config/GameConfig'
 import { SpriteLoader } from '../loaders/SpriteLoader'
 import { GameTimeManager } from '../managers/GameTimeManager'
 import { useBuildingStore } from '../../stores/buildingStore'
 
-export class SoldierUnit extends AbstractUnit implements Soldier {
+export class SoldierUnit extends BaseAlly {
   public type: SoldierType
-  public faction: 'player' = 'player'
   private spriteKey?: string
   private direction: 'down' | 'left' | 'right' | 'up' = 'right' // Default facing right
 
@@ -17,8 +16,6 @@ export class SoldierUnit extends AbstractUnit implements Soldier {
   static readonly SOLDIER_SPEED = 50
   static readonly SOLDIER_SIZE = 12
   static readonly SOLDIER_COLOR = 0x3498db
-
-  private enemies: Enemy[] = []
 
   constructor(id: string, position: Position, type: SoldierType = 'infantry') {
     super(
@@ -37,35 +34,6 @@ export class SoldierUnit extends AbstractUnit implements Soldier {
 
   protected getSize(): number {
     return SoldierUnit.SOLDIER_SIZE
-  }
-
-  public setEnemies(enemies: Enemy[]): void {
-    this.enemies = enemies
-  }
-
-  protected findTarget(): void {
-    if (this.enemies.length === 0) return
-
-    let closestEnemy: Enemy | undefined
-    let closestDistance = Infinity
-
-    for (const enemy of this.enemies) {
-      if (enemy.state === 'dead') continue
-
-      const dx = enemy.x - this.x
-      const dy = enemy.y - this.y
-      const distance = Math.sqrt(dx * dx + dy * dy)
-
-      if (distance < closestDistance) {
-        closestDistance = distance
-        closestEnemy = enemy
-      }
-    }
-
-    if (closestEnemy) {
-      this.target = closestEnemy
-      this.state = 'moving'
-    }
   }
 
   public getTypeStats(): { health: number; attack: number; speed: number } {

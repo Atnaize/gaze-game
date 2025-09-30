@@ -1,12 +1,13 @@
+// Base unit classes
 export { AbstractUnit } from './AbstractUnit'
-export { SoldierUnit } from './SoldierUnit'
+export { BaseAlly } from './BaseAlly'
+export { BaseEnemy } from './BaseEnemy'
 
-// Specific soldier classes
+// Soldier classes (allies)
+export { SoldierUnit } from './SoldierUnit'
 export { InfantryUnit } from './soldiers/InfantryUnit'
 export { ArcherUnit } from './soldiers/ArcherUnit'
 export { CavalryUnit } from './soldiers/CavalryUnit'
 
-// New sprite-based enemy system
-export { BaseEnemy } from './BaseEnemy'
-export { DynamicEnemy } from './DynamicEnemy'
-export { EnemyRegistry } from './EnemyRegistry'
+// Enemy classes - export all from enemies directory
+export * from './enemies'

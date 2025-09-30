@@ -2,7 +2,17 @@ import { Enemy, EnemyType, Soldier, EnemyConfig } from '../../types'
 import { GameConfig } from '../../config/GameConfig'
 import { SpriteLoader } from '../loaders/SpriteLoader'
 import { GameTimeManager } from '../managers/GameTimeManager'
+import { UnitBehavior } from '../behaviors/UnitBehavior'
+import { CombatBehavior } from '../behaviors/combat/CombatBehavior'
+import { AttackWallBehavior } from '../behaviors/combat/AttackWallBehavior'
 
+/**
+ * BaseEnemy - Behavior System V2
+ *
+ * Enemies automatically switch between behaviors:
+ * - Soldiers present → CombatBehavior (attack closest soldier)
+ * - No soldiers → AttackWallBehavior (move to and attack wall)
+ */
 export abstract class BaseEnemy implements Enemy {
   public id: string
   public x: number
@@ -12,7 +22,7 @@ export abstract class BaseEnemy implements Enemy {
   public attack: number
   public speed: number
   public state: 'idle' | 'moving' | 'attacking' | 'dead' | 'hurt' = 'idle'
-  public faction: 'enemy' = 'enemy'
+  public faction: 'enemy' = 'enemy' as const
   public reward: number
   public target?: Soldier
   public sprite?: Phaser.GameObjects.Sprite
@@ -20,9 +30,13 @@ export abstract class BaseEnemy implements Enemy {
 
   protected spriteLoader: SpriteLoader
   protected soldiers: Soldier[] = []
+  protected nearbyEnemies: Enemy[] = []
   protected config: EnemyConfig
   protected currentAnimation = 'idle'
   protected scene?: Phaser.Scene
+  protected lastAttackTime = 0
+  protected currentBehavior: UnitBehavior | null = null
+  private behaviorEntered = false
 
   constructor(config: EnemyConfig, x: number = 0, y: number = 0) {
     this.id = `${config.type}_${Date.now()}_${Math.random()}`
@@ -37,6 +51,15 @@ export abstract class BaseEnemy implements Enemy {
     this.attack = config.attack * GameConfig.ENEMY_ATTACK_MULTIPLIER
     this.speed = config.speed * GameConfig.ENEMY_SPEED_MULTIPLIER
     this.reward = config.reward * GameConfig.ENEMY_REWARD_MULTIPLIER
+  }
+
+  /**
+   * Get attack cooldown for this enemy
+   * Uses config value if provided, otherwise defaults to GameConfig.ATTACK_COOLDOWN
+   * @returns Attack cooldown in milliseconds
+   */
+  protected getAttackCooldown(): number {
+    return this.config.attackCooldown ?? GameConfig.ATTACK_COOLDOWN
   }
 
   get type(): EnemyType {
@@ -175,6 +198,10 @@ export abstract class BaseEnemy implements Enemy {
     this.soldiers = soldiers
   }
 
+  setNearbyEnemies(enemies: Enemy[]): void {
+    this.nearbyEnemies = enemies.filter(e => e.id !== this.id)
+  }
+
   takeDamage(damage: number): void {
     if (this.state === 'dead') return
 
@@ -203,74 +230,157 @@ export abstract class BaseEnemy implements Enemy {
     }
   }
 
+  /**
+   * Behavior-driven update loop
+   */
   update(deltaTime: number, gameSpeed: number): void {
     if (this.state === 'dead') return
 
-    // Check if game is paused and force idle animation
+    // Check if game is paused
     const timeManager = GameTimeManager.getInstance()
     if (timeManager.isPaused_()) {
       this.playAnimation('Idle')
-      this.updatePosition() // Still update visual position
+      this.updatePosition()
       return
     }
 
-    this.updateMovement(deltaTime, gameSpeed)
-    this.updateCombat()
+    const adjustedDelta = deltaTime * gameSpeed
+
+    // Select behavior if needed
+    if (!this.currentBehavior) {
+      this.selectBehavior()
+      this.behaviorEntered = false
+    }
+
+    // Execute behavior
+    const behavior = this.currentBehavior
+    if (behavior) {
+      if (!this.behaviorEntered) {
+        behavior.onEnter?.(this)
+        this.behaviorEntered = true
+      }
+
+      behavior.update(this, deltaTime)
+
+      // Check if complete
+      if (behavior.isComplete(this)) {
+        behavior.onExit?.(this)
+        this.currentBehavior = null
+        this.behaviorEntered = false
+        return
+      }
+
+      this.executeBehavior(adjustedDelta)
+    }
+
+    this.applySeparationForce()
     this.updatePosition()
   }
 
-  private updateMovement(deltaTime: number, gameSpeed: number): void {
-    if (this.state === 'hurt') return
+  /**
+   * Select behavior based on game state
+   */
+  protected selectBehavior(): void {
+    const aliveSoldiers = this.soldiers.filter(s => s.state !== 'dead')
 
-    const closestSoldier = this.findClosestSoldier()
-    if (closestSoldier) {
-      this.target = closestSoldier
-      const distance = Phaser.Math.Distance.Between(this.x, this.y, closestSoldier.x, closestSoldier.y)
-
-      if (distance > GameConfig.ATTACK_RANGE) {
-        this.state = 'moving'
-        this.playAnimation('Running')
-
-        const angle = Phaser.Math.Angle.Between(this.x, this.y, closestSoldier.x, closestSoldier.y)
-        this.x += Math.cos(angle) * this.speed * deltaTime * gameSpeed / 1000
-        this.y += Math.sin(angle) * this.speed * deltaTime * gameSpeed / 1000
-      } else {
-        this.state = 'attacking'
-        this.playAnimation('Slashing')
+    if (aliveSoldiers.length > 0) {
+      // Attack closest soldier
+      const closest = this.findClosestSoldier()
+      if (closest) {
+        this.currentBehavior = new CombatBehavior(closest)
+        this.target = closest
+        return
       }
-    } else {
-      // No soldiers - move toward the kingdom wall
-      this.moveTowardWall(deltaTime, gameSpeed)
+    }
+
+    // No soldiers - attack wall
+    this.currentBehavior = new AttackWallBehavior()
+    this.target = undefined
+  }
+
+  /**
+   * Execute current behavior
+   */
+  protected executeBehavior(adjustedDelta: number): void {
+    if (!this.currentBehavior) return
+
+    // 1. Movement
+    const destination = this.currentBehavior.getDestination(this)
+    if (destination) {
+      const dx = destination.x - this.x
+      const dy = destination.y - this.y
+      const distance = Math.sqrt(dx * dx + dy * dy)
+
+      if (distance > 1) {
+        const speedMultiplier = this.currentBehavior.getSpeedMultiplier()
+        const moveDistance = (this.speed * speedMultiplier * adjustedDelta) / 1000
+        this.x += (dx / distance) * moveDistance
+        this.y += (dy / distance) * moveDistance
+      }
+    }
+
+    // 2. Combat
+    if (this.currentBehavior.shouldAttack(this)) {
+      const target = this.currentBehavior.getAttackTarget(this)
+      if (target) {
+        target.takeDamage(this.attack)
+      } else {
+        // AttackWallBehavior - emit wall damage
+        if (this.scene) {
+          this.scene.events.emit('wall_damaged', { damage: this.attack })
+        }
+      }
+    }
+
+    // 3. Animation
+    const animState = this.currentBehavior.getAnimationState(this)
+    this.state = animState
+
+    // Map state to animation
+    switch (animState) {
+      case 'idle':
+        this.playAnimation('Idle')
+        break
+      case 'moving':
+        this.playAnimation('Running')
+        break
+      case 'attacking':
+        this.playAnimation('Slashing')
+        break
+      case 'hurt':
+        this.playAnimation('Hurt')
+        break
     }
   }
 
-  private moveTowardWall(deltaTime: number, gameSpeed: number): void {
-    const wallX = GameConfig.KINGDOM_WALL_X + GameConfig.KINGDOM_WALL_WIDTH
-    const wallY = GameConfig.KINGDOM_WALL_Y + GameConfig.KINGDOM_WALL_HEIGHT / 2
+  private applySeparationForce(): void {
+    let separationX = 0
+    let separationY = 0
+    let nearbyCount = 0
 
-    const distanceToWall = Phaser.Math.Distance.Between(this.x, this.y, wallX, wallY)
+    for (const enemy of this.nearbyEnemies) {
+      if (enemy.state === 'dead') continue
 
-    if (distanceToWall > GameConfig.ATTACK_RANGE) {
-      this.state = 'moving'
-      this.playAnimation('Running')
+      const dx = this.x - enemy.x
+      const dy = this.y - enemy.y
+      const distance = Math.sqrt(dx * dx + dy * dy)
 
-      const angle = Phaser.Math.Angle.Between(this.x, this.y, wallX, wallY)
-      this.x += Math.cos(angle) * this.speed * deltaTime * gameSpeed / 1000
-      this.y += Math.sin(angle) * this.speed * deltaTime * gameSpeed / 1000
-    } else {
-      this.state = 'attacking'
-      this.playAnimation('Slashing')
+      if (distance < GameConfig.UNIT_COLLISION_RADIUS && distance > 0) {
+        // Push away from nearby unit
+        const force = (GameConfig.UNIT_COLLISION_RADIUS - distance) / GameConfig.UNIT_COLLISION_RADIUS
+        separationX += (dx / distance) * force
+        separationY += (dy / distance) * force
+        nearbyCount++
+      }
+    }
+
+    if (nearbyCount > 0) {
+      // Apply averaged separation force
+      this.x += separationX * GameConfig.UNIT_SEPARATION_FORCE
+      this.y += separationY * GameConfig.UNIT_SEPARATION_FORCE
     }
   }
 
-  private updateCombat(): void {
-    if (this.state !== 'attacking' || !this.target) return
-
-    const distance = Phaser.Math.Distance.Between(this.x, this.y, this.target.x, this.target.y)
-    if (distance <= GameConfig.ATTACK_RANGE) {
-      this.target.takeDamage(this.attack)
-    }
-  }
 
   private updatePosition(): void {
     if (this.sprite) {

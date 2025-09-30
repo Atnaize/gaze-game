@@ -106,4 +106,17 @@ export class GameConfig {
   // Wall Damage Thresholds
   static readonly WALL_DAMAGED_THRESHOLD = 0.66 // 66% HP
   static readonly WALL_CRITICAL_THRESHOLD = 0.33 // 33% HP
+
+  // Unit Collision Configuration
+  static readonly UNIT_COLLISION_RADIUS = 30 // Minimum distance between units
+  static readonly UNIT_SEPARATION_FORCE = 1 // Strength of collision avoidance
+
+  // Ally Wandering Behavior (when no enemies present)
+  static readonly ALLY_WANDER_RADIUS = 150 // How far from wall allies can wander
+  static readonly ALLY_WANDER_IDLE_MIN = 2000 // Min time (ms) to idle at a spot
+  static readonly ALLY_WANDER_IDLE_MAX = 4000 // Max time (ms) to idle at a spot
+  static readonly ALLY_WANDER_SPEED_MULTIPLIER = 0.5 // Slower movement when wandering
+
+  // Combat System Configuration
+  static readonly ATTACK_COOLDOWN = 1000 // Time (ms) between attacks for all units
 }

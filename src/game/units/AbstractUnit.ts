@@ -1,6 +1,7 @@
 import { Unit, UnitState, Position } from '../../types/index'
 import { GameConfig } from '../../config/GameConfig'
 import { GameTimeManager } from '../managers/GameTimeManager'
+import { UnitBehavior } from '../behaviors/UnitBehavior'
 
 export abstract class AbstractUnit implements Unit {
   public id: string
@@ -16,7 +17,9 @@ export abstract class AbstractUnit implements Unit {
   public healthBar?: Phaser.GameObjects.Graphics
   public animatedSprite?: Phaser.GameObjects.Sprite
 
-  private lastAttackTime = 0
+  protected currentBehavior: UnitBehavior | null = null
+  protected lastAttackTime = 0
+  private behaviorEntered = false
 
   constructor(
     id: string,
@@ -33,6 +36,14 @@ export abstract class AbstractUnit implements Unit {
     this.attack = attack
     this.speed = speed
     this.state = 'idle'
+  }
+
+  /**
+   * Override this method in subclasses to customize attack cooldown
+   * @returns Attack cooldown in milliseconds
+   */
+  protected getAttackCooldown(): number {
+    return GameConfig.ATTACK_COOLDOWN
   }
 
   protected abstract getColor(): number
@@ -106,76 +117,102 @@ export abstract class AbstractUnit implements Unit {
     )
   }
 
+  /**
+   * Main update loop - Behavior System V2
+   * Units are now behavior-driven for clean separation of concerns
+   */
   public update(deltaTime: number, gameSpeed: number): void {
     if (this.state === 'dead') return
 
     const adjustedDelta = deltaTime * gameSpeed
 
-    switch (this.state) {
-      case 'moving':
-        this.updateMovement(adjustedDelta)
-        break
-      case 'attacking':
-        this.updateAttack(adjustedDelta)
-        break
-      case 'idle':
-        this.findTarget()
-        break
+    // If no behavior, select one
+    if (!this.currentBehavior) {
+      this.selectBehavior()
+      this.behaviorEntered = false
     }
 
+    // Execute behavior if we have one
+    const behavior = this.currentBehavior
+    if (behavior) {
+      // Call onEnter if just selected
+      if (!this.behaviorEntered) {
+        behavior.onEnter?.(this)
+        this.behaviorEntered = true
+      }
+
+      // Update behavior state
+      behavior.update(this, deltaTime)
+
+      // Check if complete
+      if (behavior.isComplete(this)) {
+        behavior.onExit?.(this)
+        this.currentBehavior = null
+        this.behaviorEntered = false
+        return // Will select new behavior next frame
+      }
+
+      // Execute behavior
+      this.executeBehavior(adjustedDelta)
+    }
+
+    // Update visuals
     this.updateVisuals()
   }
 
-  private updateMovement(_deltaTime: number): void {
-    if (!this.target) {
-      this.state = 'idle'
-      return
+  /**
+   * Execute the current behavior's instructions
+   */
+  protected executeBehavior(adjustedDelta: number): void {
+    if (!this.currentBehavior) return
+
+    // 1. Movement
+    const destination = this.currentBehavior.getDestination(this)
+    if (destination) {
+      this.moveToward(destination, adjustedDelta)
     }
 
-    const dx = this.target.x - this.x
-    const dy = this.target.y - this.y
-    const distance = Math.sqrt(dx * dx + dy * dy)
-
-    if (distance <= GameConfig.ATTACK_RANGE) {
-      this.state = 'attacking'
-      return
+    // 2. Combat
+    if (this.currentBehavior.shouldAttack(this)) {
+      const target = this.currentBehavior.getAttackTarget(this)
+      if (target) {
+        this.performAttack(target)
+      } else {
+        // Special case: AttackWallBehavior (enemy attacking wall)
+        this.attackWall()
+      }
     }
 
-    const moveDistance = (this.speed * _deltaTime) / 1000
-    const moveX = (dx / distance) * moveDistance
-    const moveY = (dy / distance) * moveDistance
-
-    this.x += moveX
-    this.y += moveY
+    // 3. Animation state (behavior controls what animation plays)
+    this.state = this.currentBehavior.getAnimationState(this)
   }
 
-  private updateAttack(deltaTime: number): void {
-    if (!this.target || this.target.state === 'dead') {
-      this.target = undefined
-      this.state = 'idle'
-      return
-    }
-
-    const dx = this.target.x - this.x
-    const dy = this.target.y - this.y
+  /**
+   * Move unit toward a destination
+   */
+  protected moveToward(destination: Position, adjustedDelta: number): void {
+    const dx = destination.x - this.x
+    const dy = destination.y - this.y
     const distance = Math.sqrt(dx * dx + dy * dy)
 
-    if (distance > GameConfig.ATTACK_RANGE) {
-      this.state = 'moving'
-      return
-    }
+    if (distance > 1) {
+      const speedMultiplier = this.currentBehavior?.getSpeedMultiplier() || 1.0
+      const effectiveSpeed = this.speed * speedMultiplier
+      const moveDistance = (effectiveSpeed * adjustedDelta) / 1000
 
-    const now = Date.now()
-    if (now - this.lastAttackTime >= 1000) {
-      this.performAttack()
-      this.lastAttackTime = now
+      const moveX = (dx / distance) * moveDistance
+      const moveY = (dy / distance) * moveDistance
+
+      this.x += moveX
+      this.y += moveY
     }
   }
 
-  private performAttack(): void {
-    if (!this.target) return
-
-    this.target.takeDamage(this.attack)
+  /**
+   * Attack a unit target
+   */
+  protected performAttack(target: Unit): void {
+    target.takeDamage(this.attack)
 
     // Visual attack effect
     if (this.sprite) {
@@ -184,6 +221,29 @@ export abstract class AbstractUnit implements Unit {
         if (this.sprite) this.drawSprite()
       }, 100)
     }
+  }
+
+  /**
+   * Attack the kingdom wall (for enemies)
+   * Subclasses can override this
+   */
+  protected attackWall(): void {
+    // Default: do nothing (only enemies attack walls)
+  }
+
+  /**
+   * Subclasses must implement behavior selection logic
+   * This is called when currentBehavior is null
+   */
+  protected abstract selectBehavior(): void
+
+  /**
+   * @deprecated Use selectBehavior() instead
+   * Kept for backward compatibility during migration
+   */
+  protected findTarget(): void {
+    // Default implementation calls selectBehavior
+    this.selectBehavior()
   }
 
   public takeDamage(damage: number): void {
@@ -271,8 +331,6 @@ export abstract class AbstractUnit implements Unit {
     this.updateHealthBar()
     this.updateAnimation()
   }
-
-  protected abstract findTarget(): void
 
   // Base method for animated sprites - can be overridden
   public createAnimatedSprite(scene: Phaser.Scene): void {

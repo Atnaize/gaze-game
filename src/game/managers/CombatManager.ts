@@ -19,23 +19,29 @@ export class CombatManager {
   }
 
   public updateUnits(gameDelta: number): void {
+    // Get active units once for efficiency
+    const activeEnemies = this.enemies.filter(e => e.state !== 'dead')
+    const activeSoldiers = this.soldiers.filter(s => s.state !== 'dead')
+
     // Update all soldiers with game delta time (already adjusted for pause/speed)
     for (const soldier of this.soldiers) {
       if (soldier.state !== 'dead') {
-        soldier.update(gameDelta, 1) // gameSpeed is now 1 since gameDelta is pre-adjusted
         // Update enemy references for targeting
-        const activeEnemies = this.enemies.filter(e => e.state !== 'dead')
         soldier.setEnemies(activeEnemies)
+        // Update nearby soldiers for collision avoidance
+        soldier.setNearbySoldiers(activeSoldiers)
+        soldier.update(gameDelta, 1) // gameSpeed is now 1 since gameDelta is pre-adjusted
       }
     }
 
     // Update all enemies
     for (const enemy of this.enemies) {
       if (enemy.state !== 'dead') {
-        enemy.update(gameDelta, 1) // gameSpeed is now 1 since gameDelta is pre-adjusted
         // Update soldier references for targeting
-        const activeSoldiers = this.soldiers.filter(s => s.state !== 'dead')
         enemy.setSoldiers(activeSoldiers)
+        // Update nearby enemies for collision avoidance
+        enemy.setNearbyEnemies(activeEnemies)
+        enemy.update(gameDelta, 1) // gameSpeed is now 1 since gameDelta is pre-adjusted
       }
     }
   }
